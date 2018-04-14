@@ -6,7 +6,6 @@ Arguments:
 -n connecting port numbers (separated by commas)
 -c credit
 -d debit
--q query
 Work within Main:
 - call initialize for the program
 
@@ -21,5 +20,6 @@ uses consensus protocol to check (if other port balances are 0)
 -query - return current balance
 
 ***also need to look up how to do fail case where program terminates, and how to notify other ports that this port is now invalid***
+***If a node that failed starts running again, then it should use the consensus protocol to obtain the current balance from the other instances***
 
 dollars only?
