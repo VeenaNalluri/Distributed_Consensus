@@ -11,6 +11,7 @@
 #include <string.h>
 #include <getopt.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
 
 // CHANGE accordingly
 void show_help() {
@@ -23,30 +24,56 @@ void show_help() {
 
 
 //connects to other instances
-int initialize(int port_num, int other_ports){
-    int sockfd[5];
+int initialize(int port_num, int other_ports[]){
+    int sockfd;
     /* Create the socket */
-    for (int i = 0;i<=5;i++) {
-        sockfd[i] = socket(AF_INET, SOCK_DGRAM, 0);
+
+        sockfd = socket(AF_INET, SOCK_DGRAM, 0);
         if (sockfd < 0) {
             printf("client_conn_init: failed to create socket on the client (%d)\n");
             return -1;
         }
 
+
+    struct sockaddr_in myaddr;
+    /* bind to an arbitrary return address */
+    /* because this is the client side, we don't care about the address */
+    /* since no application will initiate communication here - it will */
+    /* just send responses */ /* INADDR_ANY is the IP address and 0 is the socket */
+    /* htonl converts a long integer (e.g. address) to a network representation */
+    /* htons converts a short integer (e.g. port) to a network representation */
+
+    memset((char *)&myaddr, 0, sizeof(myaddr));
+    myaddr.sin_family = AF_INET;
+    myaddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    myaddr.sin_port = htons(port_num);
+
+    int i = bind(sockfd, (struct sockaddr*)& myaddr, sizeof(myaddr));
+
+    if(i<0)
+
+    {
+        perror(" bind failed\n");
     }
 
-    /* Set buffer size */
-    int buf_size = (1024 * 1024);
-    for(int i =0;i<=5;i++){
-        if (setsockopt(sockfd[i], SOL_SOCKET, SO_RCVBUF, &buf_size,
-                       sizeof(buf_size)) < 0) {
-            printf("client_conn_init: failed to set recv buf (%d)\n");
-            return -1;
-        }
+    char* host="localhost";
+    struct hostent *hp;     /* host information */
+    struct sockaddr_in servaddr;    /* server address */
+    memset((char*)&servaddr, 0, sizeof(servaddr));
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_port = htons(other_ports[0]);
+    servaddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    char* message = "debit : 400";
+    int j = sendto(sockfd, message, strlen(message), 0, (struct sockaddr*) &servaddr, sizeof(servaddr));
+    if (j <0)
+    {
+       perror("send to failed\n");
     }
-
-
 }
+
+
+
+
 
 // Change accordingly
 int main(int argc, char* argv[])
@@ -91,6 +118,6 @@ int main(int argc, char* argv[])
         }
     }
 
-
+    int initialize(int port_num, int other_ports);
 
  }
