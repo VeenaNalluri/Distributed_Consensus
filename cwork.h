@@ -3,7 +3,9 @@
 
 // initializing the instance with correct port num, and sockets to other port,
 // uses consensus protocol to check (if other port balances are 0)
-void initialize(int port_num, int* other_ports);
+int initialize(int myport, int receiver_port[4]);
+
+void *receiving_ports(int receiver_port[]);
 
 // itself is coordinator which checks (always passes) with other ports, and then credits to account
 void credit(float money);

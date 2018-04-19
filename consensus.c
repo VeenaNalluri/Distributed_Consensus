@@ -12,6 +12,7 @@
 #include <getopt.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <pthread.h>
 
 // CHANGE accordingly
 void show_help() {
@@ -22,20 +23,53 @@ void show_help() {
     printf("-q <query> Balnace enquiry");
 }
 
-
+char * buffer;
+size_t bufsize = 32;
+size_t transaction;
+int amount;
+int curr_balance = 0;
+int sockfd;
+struct sockaddr_in myaddr,addr[4];
+socklen_t addressLength = sizeof(myaddr);
+int query;
+int credit;
+int debit;
 //connects to other instances
-int initialize(int port_num, int other_ports[]){
-    int sockfd;
+
+void *receiving_ports(int receiver_port[]){
+
+    int message;
+
+    char acknowledge = 'yes';
+    message = recvfrom(sockfd, buffer, 2048, 0, (struct sockaddr*) &myaddr, &addressLength);
+    char *command = strtok(message,":");
+    amount = strtok(NULL,":");
+    if(strcmp(command,query)){
+
+        sendto(sockfd,acknowledge,strlen(acknowledge),0, (struct sockaddr*)&myaddr,&addressLength );
+    }
+    else if(strcmp(command,credit)){
+        sendto(sockfd,acknowledge,strlen(acknowledge),0, (struct sockaddr*)&myaddr,&addressLength );
+    }
+    else{
+        sendto(sockfd,acknowledge,strlen(acknowledge),0, (struct sockaddr*)&myaddr,&addressLength );
+    }
+
+}
+
+int initialize(int myport, int receiver_port[4]){
+
+
     /* Create the socket */
 
         sockfd = socket(AF_INET, SOCK_DGRAM, 0);
         if (sockfd < 0) {
-            printf("client_conn_init: failed to create socket on the client (%d)\n");
+            printf("Failed to create a socket\n");
             return -1;
         }
 
 
-    struct sockaddr_in myaddr;
+
     /* bind to an arbitrary return address */
     /* because this is the client side, we don't care about the address */
     /* since no application will initiate communication here - it will */
@@ -46,7 +80,7 @@ int initialize(int port_num, int other_ports[]){
     memset((char *)&myaddr, 0, sizeof(myaddr));
     myaddr.sin_family = AF_INET;
     myaddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    myaddr.sin_port = htons(port_num);
+    myaddr.sin_port = htons(myport);
 
     int i = bind(sockfd, (struct sockaddr*)& myaddr, sizeof(myaddr));
 
@@ -55,21 +89,50 @@ int initialize(int port_num, int other_ports[]){
     {
         perror(" bind failed\n");
     }
+    for(int j=0;j<4;j++){
 
-    char* host="localhost";
-    struct hostent *hp;     /* host information */
-    struct sockaddr_in servaddr;    /* server address */
-    memset((char*)&servaddr, 0, sizeof(servaddr));
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_port = htons(other_ports[0]);
-    servaddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    char* message = "debit : 400";
-    int j = sendto(sockfd, message, strlen(message), 0, (struct sockaddr*) &servaddr, sizeof(servaddr));
-    if (j <0)
-    {
-       perror("send to failed\n");
+        memset((char *)&addr[j], 0,sizeof(addr[j]));
+        addr[j].sin_family = AF_INET;
+        addr[j].sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+        addr[j].sin_port = htons(receiver_port[j]);
+
     }
-}
+    pthread_t p1;
+    int create = pthread_create(&p1,NULL,receiving_ports,NULL);
+    while(1){
+        //input has to be taken from console
+        printf("Enter transaction type and amount");
+
+        buffer = (char*)malloc(bufsize*sizeof(char));
+        transaction = getline(&buffer,&bufsize, stdin);
+        char *command = strtok(transaction,":");
+        while(command!=NULL){
+            printf("%s\n",command);
+            amount = strtok(NULL,":");
+        }
+        if(strcmp(command,query)){
+            printf("Current Balance is %d\n",curr_balance);
+        }
+        else if(strcmp(command,credit)) {
+            curr_balance = curr_balance + amount;
+            for (int j = 0; j < 4; j++) {
+                sendto(sockfd,transaction, strlen(transaction), 0, (struct sockaddr *) &addr[j], sizeof(addr[j]));
+            }
+        }else {
+            curr_balance = curr_balance-debit;
+                for(int j=0;j<4;j++){
+                    sendto(sockfd, transaction, strlen(transaction), 0, (struct sockaddr*) &addr[j], sizeof(addr[j]));
+                }
+            }
+
+        }
+    }
+
+
+
+
+
+
 
 
 
@@ -78,7 +141,7 @@ int initialize(int port_num, int other_ports[]){
 // Change accordingly
 int main(int argc, char* argv[])
 {
-    char c;
+    /*char c;
 
     // These are the default configuration values used
     // if no command line arguments are given.
@@ -100,8 +163,13 @@ int main(int argc, char* argv[])
             port_num    = atof(optarg);
             break;
         case 'n':
+
+//delim = strtok(other_ports[i],)
             for (int i = 0;i<=3;i++){
-                other_ports[i] = atof(optarg);
+
+                char str = atof(optarg);
+                int *otherports;
+                other_ports[i] = strtok(str,",");
             }
 
             break;
@@ -116,8 +184,14 @@ int main(int argc, char* argv[])
             exit(1);
             break;
         }
+    }*/
+    int myport = atoi(argv[1]);
+    int receiver_port[4];
+    for(int i=0;i< 4;i++){
+        receiver_port[i] = atoi(argv[i+2]);
     }
-
-    int initialize(int port_num, int other_ports);
-
+    int initialize(int myport, int receiver_port[4]);
+    /*pthread_t p1;
+    int create = pthread_create(&p1,NULL,receiving_ports,NULL);
+*/
  }
