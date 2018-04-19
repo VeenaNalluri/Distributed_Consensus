@@ -57,7 +57,7 @@ void *receiving_ports(int receiver_port[]){
 
 }
 
-int initialize(int myport, int receiver_port[4]){
+int initialize(int myport, int receiver_port[]){
 
 
     /* Create the socket */
@@ -99,12 +99,14 @@ int initialize(int myport, int receiver_port[4]){
     }
     pthread_t p1;
     int create = pthread_create(&p1,NULL,receiving_ports,NULL);
+    printf("about to enter transaction\n");
     while(1){
         //input has to be taken from console
-        printf("Enter transaction type and amount");
+        printf("Enter transaction type and amount\n");
 
         buffer = (char*)malloc(bufsize*sizeof(char));
         transaction = getline(&buffer,&bufsize, stdin);
+        printf("%s\n", buffer);
         char *command = strtok(transaction,":");
         while(command!=NULL){
             printf("%s\n",command);
@@ -124,8 +126,9 @@ int initialize(int myport, int receiver_port[4]){
                     sendto(sockfd, transaction, strlen(transaction), 0, (struct sockaddr*) &addr[j], sizeof(addr[j]));
                 }
             }
-
         }
+
+
     }
 
 
@@ -141,56 +144,13 @@ int initialize(int myport, int receiver_port[4]){
 // Change accordingly
 int main(int argc, char* argv[])
 {
-    /*char c;
 
-    // These are the default configuration values used
-    // if no command line arguments are given.
-
-    int port_num = 5600;
-    int other_ports[4] = {5601,5602,5603,5604};
-    double money = 0;
-    double credit = 0;
-    double debit = 0;
-    double curr_balance = 0;
-
-
-    // For each command line argument given,
-    // override the appropriate configuration value.
-
-    while ((c = getopt(argc, argv, "p:n:c:d:h")) != -1) {
-        switch (c) {
-        case 'p':
-            port_num    = atof(optarg);
-            break;
-        case 'n':
-
-//delim = strtok(other_ports[i],)
-            for (int i = 0;i<=3;i++){
-
-                char str = atof(optarg);
-                int *otherports;
-                other_ports[i] = strtok(str,",");
-            }
-
-            break;
-        case 'c':
-            credit = atof(optarg);
-            break;
-        case 'd':
-            debit = atoi(optarg);
-            break;
-        case 'h':
-            show_help();
-            exit(1);
-            break;
-        }
-    }*/
     int myport = atoi(argv[1]);
     int receiver_port[4];
     for(int i=0;i< 4;i++){
         receiver_port[i] = atoi(argv[i+2]);
     }
-    int initialize(int myport, int receiver_port[4]);
+    initialize(myport, receiver_port);
     /*pthread_t p1;
     int create = pthread_create(&p1,NULL,receiving_ports,NULL);
 */
