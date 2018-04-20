@@ -33,7 +33,9 @@ struct sockaddr_in myaddr,addr[4],address;
 socklen_t addressLength = sizeof(address);
 socklen_t myaddrLength = sizeof(myaddr);
 
+
 int acknowledge=0;
+socklen_t receiverAddressLength[4];
 
 //connects to other instances
 
@@ -42,13 +44,17 @@ void *receiving_ports(void *arg) {
     int messagelen;
     char receive_buffer[2048];
     socklen_t addressLength = sizeof(address);
+
+    for(int i =0;i<4;i++){
+        receiverAddressLength[i]= {sizeof(addr[i])};
+    }
     while (1) {
-        printf("In thread\n");
+        //printf("In thread\n");
         messagelen = recvfrom(sockfd, receive_buffer, 2048, 0, (struct sockaddr *) &address, &addressLength);
         printf("message length %d \n", messagelen);
         printf("buffer received %s\n", receive_buffer);
         if (messagelen > 0) {
-            printf("hi");
+            //printf("hi");
             char *command = strtok(receive_buffer, ":");
             char *amount = strtok(NULL, ":");
             if (strcmp(command, "credit") == 0) {
@@ -75,14 +81,14 @@ void *receiving_ports(void *arg) {
                     printf("Transaction Succeeded");
                     for (int i = 0; i < 4; i++) {
 
-                        sendto(sockfd, "Commit", strlen("Commit"), 0, (struct sockaddr *) &addr[i], sizeof(addr[i]));
+                        sendto(sockfd, "Commit", strlen("Commit"), 0, (struct sockaddr *) &addr[i], &receiverAddressLength[i]);
                     }
 
                 }
             } else if (strcmp(command, "No") == 0) {
 
                 for (int i = 0; i < 4; i++) {
-                    sendto(sockfd, "Abhort", strlen("Abhort"), 0, (struct sockaddr *) &addr[i], sizeof(addr[i]));
+                    sendto(sockfd, "Abhort", strlen("Abhort"), 0, (struct sockaddr *) &addr[i], &receiverAddressLength[i]);
                 }
 
             } else if (strcmp(command, "commit") == 0) { // if confirmation of transaction is recieved
@@ -100,128 +106,6 @@ void *receiving_ports(void *arg) {
             }
         }
     }
-
-
-
-/*
-int initialize(int myport, int receiver_port[]){
-
-
-    */
-/* Create the socket *//*
-
-
-    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (sockfd < 0) {
-        printf("Failed to create a socket\n");
-        return -1;
-    }
-
-
-
-    */
-/* bind to an arbitrary return address *//*
-
-    */
-/* because this is the client side, we don't care about the address *//*
-
-    */
-/* since no application will initiate communication here - it will *//*
-
-    */
-/* just send responses *//*
- */
-/* INADDR_ANY is the IP address and 0 is the socket *//*
-
-    */
-/* htonl converts a long integer (e.g. address) to a network representation *//*
-
-    */
-/* htons converts a short integer (e.g. port) to a network representation *//*
-
-
-    memset((char *)&myaddr, 0, sizeof(myaddr));
-    myaddr.sin_family = AF_INET;
-    myaddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    myaddr.sin_port = htons(myport);
-
-    int i = bind(sockfd, (struct sockaddr*)& myaddr, sizeof(myaddr));
-
-    if(i<0)
-
-    {
-        perror(" bind failed\n");
-    }
-    for(int j=0;j<4;j++){
-
-        memset((char *)&addr[j], 0,sizeof(addr[j]));
-        addr[j].sin_family = AF_INET;
-        addr[j].sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-        addr[j].sin_port = htons(receiver_port[j]);
-        printf("%d\n",receiver_port[j]);
-    }
-    pthread_t p1;
-    int create = pthread_create(&p1,NULL,receiving_ports,NULL);
-
-    if (create != 0) {
-        printf("pthread_create failed\n");
-        exit(1);
-    }
-    printf("about to enter transaction\n");
-    while(1){
-        //input has to be taken from console
-        printf("Enter transaction type and amount\n");
-        char * send_buffer;
-        size_t bufsize = 32;
-        send_buffer = (char*)malloc(bufsize*sizeof(char));
-        getline(&send_buffer,&bufsize, stdin);
-        printf("%s\n", send_buffer);
-        char *command = strtok(send_buffer,":");
-        printf("%s\n",command);
-        char *amount = strtok(NULL,":");
-        printf("%s\n",amount);
-        if(strcmp(command,"credit")==0){
-            acknowledge = 0;
-            amount = atoi(amount);
-            printf("Amount is %d\n",amount);
-            curr_balance = curr_balance+amount;
-            printf("Current Balance after credit is %d\n",curr_balance);
-            for (int j = 0; j < 4; j++) {
-                sendto(sockfd,send_buffer, strlen(send_buffer), 0, (struct sockaddr *) &addr[j], sizeof(addr[j]));
-            }
-
-
-        }
-        else if(strcmp(command,"query")==0) {
-            amount = atoi(amount);
-            printf("Current Balance after query %d\n",curr_balance);
-
-
-        }else if(strcmp(command,"debit")==0) {
-            acknowledge = 0;
-            int amount = atoi(amount);
-            printf("Amount is %d\n",amount);
-            curr_balance = curr_balance-amount;
-            printf("Curr balance after debit %d\n",curr_balance);
-            for(int j=0;j<4;j++){
-                sendto(sockfd, send_buffer, strlen(send_buffer), 0, (struct sockaddr*) &addr[j], sizeof(addr[j]));
-            }
-
-        }
-    }
-
-
-    }
-
-
-
-
-
-
-
-*/
-
-
 
 
 // Change accordingly
@@ -256,7 +140,7 @@ int main(int argc, char* argv[])
     myaddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     myaddr.sin_port = htons(myport);
 
-    int i = bind(sockfd, (struct sockaddr*)& myaddr, sizeof(myaddr));
+    int i = bind(sockfd, (struct sockaddr*)& myaddr, &myaddrLength);
 
     if(i<0)
 
@@ -269,7 +153,9 @@ int main(int argc, char* argv[])
         addr[j].sin_family = AF_INET;
         addr[j].sin_addr.s_addr = htonl(INADDR_LOOPBACK);
         addr[j].sin_port = htons(receiver_port[j]);
+        receiverAddressLength[j]= {sizeof(addr[j])};
         printf("%d\n",receiver_port[j]);
+
     }
     pthread_t p1;
     int create = pthread_create(&p1,NULL,receiving_ports,NULL);
@@ -302,7 +188,7 @@ int main(int argc, char* argv[])
             printf("vefor %s\n",credit_buf);
             for (int j = 0; j < 4; j++) {
                 printf("%s\n",credit_buf);
-                sendto(sockfd,credit_buf, strlen(credit_buf), 0, (struct sockaddr *) &addr[j], sizeof(addr[j]));
+                sendto(sockfd,credit_buf, strlen(credit_buf), 0, (struct sockaddr *) &addr[j], &receiverAddressLength[j]);
             }
 
 
@@ -321,7 +207,7 @@ int main(int argc, char* argv[])
                 char debit_buf[] = "";
                 sprintf(debit_buf, "debit:%d",amount);
                 printf("%s\n",debit_buf);
-                sendto(sockfd, debit_buf, strlen(debit_buf), 0, (struct sockaddr*) &addr[j], sizeof(addr[j]));
+                sendto(sockfd, debit_buf, strlen(debit_buf), 0, (struct sockaddr*) &addr[j], &receiverAddressLength[j]);
             }
 
         }
