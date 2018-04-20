@@ -46,7 +46,7 @@ void *receiving_ports(void *arg) {
     socklen_t addressLength = sizeof(address);
 
     for(int i =0;i<4;i++){
-        receiverAddressLength[i]= {sizeof(addr[i])};
+        receiverAddressLength[i]= sizeof(addr[i]);
     }
     while (1) {
         //printf("In thread\n");
@@ -57,19 +57,20 @@ void *receiving_ports(void *arg) {
             //printf("hi");
             char *command = strtok(receive_buffer, ":");
             char *amount = strtok(NULL, ":");
+            printf("%d\n",command);
             if (strcmp(command, "credit") == 0) {
                 amount = atoi(amount);
                 printf("Sending Yes to credit");
-                sendto(sockfd, "Yes", strlen("Yes"), 0, (struct sockaddr *) &address,&addressLength);
+                sendto(sockfd, "Yes", strlen("Yes"), 0, (struct sockaddr *) &address,sizeof(address));
             } else if (strcmp(command, "debit") == 0) {
                 int amount = atoi(amount);
 
                 if (curr_balance >= 0) {
                     printf("Sending Yes to Debit");
-                    sendto(sockfd, "Yes", strlen("Yes"), 0, (struct sockaddr *) &address, &addressLength);
+                    sendto(sockfd, "Yes", strlen("Yes"), 0, (struct sockaddr *) &address, sizeof(address));
                 } else {
                     printf("Sending No to Debit");
-                    sendto(sockfd, "No", strlen("No"), 0, (struct sockaddr *) &address, &addressLength);
+                    sendto(sockfd, "No", strlen("No"), 0, (struct sockaddr *) &address, sizeof(address));
                 }
 
             } else if (strcmp(command, "Yes") == 0) {
@@ -81,14 +82,14 @@ void *receiving_ports(void *arg) {
                     printf("Transaction Succeeded");
                     for (int i = 0; i < 4; i++) {
 
-                        sendto(sockfd, "Commit", strlen("Commit"), 0, (struct sockaddr *) &addr[i], &receiverAddressLength[i]);
+                        sendto(sockfd, "Commit", strlen("Commit"), 0, (struct sockaddr *) &addr[i], sizeof(addr[i]));
                     }
 
                 }
             } else if (strcmp(command, "No") == 0) {
 
                 for (int i = 0; i < 4; i++) {
-                    sendto(sockfd, "Abhort", strlen("Abhort"), 0, (struct sockaddr *) &addr[i], &receiverAddressLength[i]);
+                    sendto(sockfd, "Abhort", strlen("Abhort"), 0, (struct sockaddr *) &addr[i], sizeof(addr[i]));
                 }
 
             } else if (strcmp(command, "commit") == 0) { // if confirmation of transaction is recieved
@@ -102,8 +103,7 @@ void *receiving_ports(void *arg) {
             }}
         else {
                 printf("error with recvfrom %d\n", errno);
-                //err_exit("recvfrom\n");
-            }
+        }
         }
     }
 
@@ -140,7 +140,7 @@ int main(int argc, char* argv[])
     myaddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     myaddr.sin_port = htons(myport);
 
-    int i = bind(sockfd, (struct sockaddr*)& myaddr, &myaddrLength);
+    int i = bind(sockfd, (struct sockaddr*)& myaddr, sizeof(myaddr));
 
     if(i<0)
 
@@ -153,7 +153,7 @@ int main(int argc, char* argv[])
         addr[j].sin_family = AF_INET;
         addr[j].sin_addr.s_addr = htonl(INADDR_LOOPBACK);
         addr[j].sin_port = htons(receiver_port[j]);
-        receiverAddressLength[j]= {sizeof(addr[j])};
+        receiverAddressLength[j]= sizeof(addr[j]);
         printf("%d\n",receiver_port[j]);
 
     }
@@ -185,10 +185,10 @@ int main(int argc, char* argv[])
             char credit_buf[] = ""; // intialize debit message
             sprintf(credit_buf, "credit: %d",amount);
             //printf("%s",send_buffer);
-            printf("vefor %s\n",credit_buf);
+            //printf("vefor %s\n",credit_buf);
             for (int j = 0; j < 4; j++) {
-                printf("%s\n",credit_buf);
-                sendto(sockfd,credit_buf, strlen(credit_buf), 0, (struct sockaddr *) &addr[j], &receiverAddressLength[j]);
+                //printf("%s\n",credit_buf);
+                sendto(sockfd,credit_buf, strlen(credit_buf), 0, (struct sockaddr *) &addr[j], sizeof(addr[j]));
             }
 
 
@@ -206,8 +206,8 @@ int main(int argc, char* argv[])
             for(int j=0;j<4;j++){
                 char debit_buf[] = "";
                 sprintf(debit_buf, "debit:%d",amount);
-                printf("%s\n",debit_buf);
-                sendto(sockfd, debit_buf, strlen(debit_buf), 0, (struct sockaddr*) &addr[j], &receiverAddressLength[j]);
+                //printf("%s\n",debit_buf);
+                sendto(sockfd, debit_buf, strlen(debit_buf), 0, (struct sockaddr*) &addr[j], sizeof(addr[j]));
             }
 
         }
