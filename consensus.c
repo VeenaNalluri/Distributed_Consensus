@@ -6,6 +6,7 @@
 // This supports upto 5 instances of this program using sockets for communication between them.
 
 #define _GNU_SOURCE
+#include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,16 +16,37 @@
 #include <errno.h>
 
 
-int curr_balance; //bank acoount balance
+int curr_balance; //bank account balance
 int value; //amount entered
 int set_balance; //resetting the balance if disconnected
 int sockfd;     //filedescripter for socket
+int acknowledge=0; //setting acknowledgement if message received is Yes
 struct sockaddr_in myaddr,addr[4],address;
 socklen_t addressLength = sizeof(address);
 socklen_t myaddrLength = sizeof(myaddr);
 
+void show_help() 
+{
+    printf( "Use: main [options]\n");
+    printf("Where are options are:\n");
+    printf("-p <port number> This is the port number of this instance of the program\n");
+    printf("-n <four port numbers> These need to be four unique port numbers that will be connected to instance of program\n");
+    printf("-h <> Shows this help text.\n\n");
+    printf("To properly use this program, you must open five terminals where you will create five instances of the program each with different port numbers and connecting them to the other ports.\n");
+    printf("To start an instance properly, you must give it an argument for p and four arguments for n.\n");
+    printf("For example, these might be the calls you make in five different terminals:\n");
+    printf("\t1. ./main -p 5600 -n 5601,5602,5603,5604\n"); 
+    printf("\t2. ./main -p 5601 -n 5600,5602,5603,5604\n"); 
+    printf("\t3. ./main -p 5602 -n 5601,5600,5603,5604\n"); 
+    printf("\t4. ./main -p 5603 -n 5601,5602,5600,5604\n"); 
+    printf("\t5. ./main -p 5604 -n 5601,5602,5603,5600\n\n"); 
+    printf("Within the program, you can do any of the following actions:\n");
+    printf("\tquery:0 - You can call this by typing \"query:0\". This prints the account balance.\n");
+    printf("\tcredit:<val> - You can call this by typing something like \"credit:10\". This adds val to the account balance.\n");
+    printf("\tdebit:<val> - You can call this by typing something like \"debit:10\". This remove val from the account balance.\n");
+    printf("\tbalance - You can call this by typing something like\"balance\". This resets the account balance.\n");
+}
 
-int acknowledge=0; //setting acknowledgement if message received is Yes
 
 void *receiving_ports(void *arg) {
 
@@ -111,32 +133,63 @@ void *receiving_ports(void *arg) {
         }
     }
 
-
-// Change accordingly
 int main(int argc, char* argv[])
 {
+    char c;
+    char *nums;
 
-    int myport = atoi(argv[1]);//coordinator port[atm where the transaction is done]
-    int receiver_port[4];//receiving ports[other atms where the transaction can be done]
-    for(int i=0;i< 4;i++){
-        receiver_port[i] = atoi(argv[i+2]);
-       }
-/* Create the socket */
+    int myport = -1; //coordinator port[atm where the transaction is done]  
+    int receiver_port[] = {-1,-1,-1,-1}; //receiving ports[other atms where the transaction can be done]
+    
 
+    // For each command line argument given,
+    // override the appropriate configuration value.
+    while ((c = getopt(argc, argv, "p:n:h")) != -1) {
+    	switch(c) {
+	case 'p':
+		myport = atoi(optarg);
+		break;
+	case 'n':
+		nums = strtok(optarg, ",");
+		receiver_port[0] = atoi(nums);
+		for(int i=1;i< 4;i++){
+       			 receiver_port[i] = atoi(strtok(NULL,","));
+     		}
+		break;
+	case 'h':
+		show_help();
+		exit(1);
+		break;
+	}
+    }
+
+    //if not set properly, exit
+    if (myport == -1){
+	printf("Port number was not set. Run ./main -h for help.\n");
+	exit(1);
+    }
+    for (int i = 0; i < 4; i++) 
+    {
+	printf("%d\n", receiver_port[i]);
+	if (receiver_port[i] == -1) {
+		printf("Not enough ports given. Run ./main -h for help.\n");
+		exit(1);
+	}
+     }
+    
+   //Create the socket
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0) {
         printf("Failed to create a socket\n");
         return -1;
     }
 
-
-
-    /* bind to an arbitrary return address */
-    /* because this is the client side, we don't care about the address */
-    /* since no application will initiate communication here - it will */
-    /* just send responses */ /* INADDR_ANY is the IP address and 0 is the socket */
-    /* htonl converts a long integer (e.g. address) to a network representation */
-    /* htons converts a short integer (e.g. port) to a network representation */
+    // bind to an arbitrary return address
+    // because this is the client side, we don't care about the address
+    // since no application will initiate communication here - it will
+    // just send responses INADDR_ANY is the IP address and 0 is the socket
+    // htonl converts a long integer (e.g. address) to a network representation
+    // htons converts a short integer (e.g. port) to a network representation
 
     memset((char *)&myaddr, 0, sizeof(myaddr));
     myaddr.sin_family = AF_INET;
@@ -213,14 +266,7 @@ int main(int argc, char* argv[])
 
         } else if (strcmp(command, "exit") == 0) { //exit
             exit(0);
-        }
-        else if (strcmp(command, "help") == 0) {
-            printf("Can do transaction in 5 Atms\n");
-            printf("Input Commands:\n");
-            printf("query:0\": prints the balance");
-            printf("credit:I\": credits I to the balance\n");
-            printf("debit I\": debits I from the balance\n");
-            printf("balance\": resetting balance\n");
+
         }else {
             printf("Unknown Command\n");
         }
