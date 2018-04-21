@@ -28,7 +28,7 @@ socklen_t myaddrLength = sizeof(myaddr);
 void show_help() 
 {
     printf( "Use: main [options]\n");
-    printf("Where are options are:\n");
+    printf("Where options are:\n");
     printf("-p <port number> This is the port number of this instance of the program\n");
     printf("-n <four port numbers> These need to be four unique port numbers that will be connected to instance of program\n");
     printf("-h <> Shows this help text.\n\n");
