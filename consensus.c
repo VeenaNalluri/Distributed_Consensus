@@ -151,9 +151,9 @@ int main(int argc, char* argv[])
 		break;
 	case 'n':
 		nums = strtok(optarg, ",");
-		receiver_port[0] = atoi(nums);
-		for(int i=1;i< 4;i++){
-       			 receiver_port[i] = atoi(strtok(NULL,","));
+		for(int i=1;i< 4 && nums != NULL;i++){
+       			receiver_port[i] = atoi(nums);
+			nums = strtok(NULL,",");
      		}
 		break;
 	case 'h':
@@ -170,7 +170,6 @@ int main(int argc, char* argv[])
     }
     for (int i = 0; i < 4; i++) 
     {
-	printf("%d\n", receiver_port[i]);
 	if (receiver_port[i] == -1) {
 		printf("Not enough ports given. Run ./main -h for help.\n");
 		exit(1);
