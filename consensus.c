@@ -40,13 +40,19 @@ void show_help()
     printf("\t3. ./main -p 5602 -n 5601,5600,5603,5604\n"); 
     printf("\t4. ./main -p 5603 -n 5601,5602,5600,5604\n"); 
     printf("\t5. ./main -p 5604 -n 5601,5602,5603,5600\n\n"); 
-    printf("Within the program, you can do any of the following actions:\n");
-    printf("\tquery:0 - You can call this by typing \"query:0\". This prints the account balance.\n");
-    printf("\tcredit:<val> - You can call this by typing something like \"credit:10\". This adds val to the account balance.\n");
-    printf("\tdebit:<val> - You can call this by typing something like \"debit:10\". This remove val from the account balance.\n");
-    printf("\tbalance - You can call this by typing something like\"balance\". This resets the account balance.\n");
+    show_prog_help();
 }
 
+void show_prog_help()
+{
+    printf("Within the program, you can do any of the following actions:\n");
+    printf("\tquery - You can call this by typing \"query\". This prints the account balance.\n");
+    printf("\tcredit:<val> - You can call this by typing something like \"credit:10\". This adds val to the account balance.\n");
+    printf("\tdebit:<val> - You can call this by typing something like \"debit:10\". This remove val from the account balance.\n");
+    printf("\tbalance - You can call this by typing \"balance\". This resets the account balance.\n");
+    printf("\thelp - You can call this by typing \"help\". This shows this help message.\n");
+    printf("\texit - You can call this by typing \"exit\". This exits the program.\n");
+}
 
 void *receiving_ports(void *arg) {
 
@@ -151,7 +157,7 @@ int main(int argc, char* argv[])
 		break;
 	case 'n':
 		nums = strtok(optarg, ",");
-		for(int i=1;i< 4 && nums != NULL;i++){
+		for(int i=0;i< 4 && nums != NULL;i++){
        			receiver_port[i] = atoi(nums);
 			nums = strtok(NULL,",");
      		}
@@ -183,10 +189,10 @@ int main(int argc, char* argv[])
         return -1;
     }
 
-    // bind to an arbitrary return address
-    // because this is the client side, we don't care about the address
-    // since no application will initiate communication here - it will
-    // just send responses INADDR_ANY is the IP address and 0 is the socket
+    // This binds to an arbitrary return address because this is the client side and 
+    // we don't care about the address. Since no application will initiate communication 
+    // here - it will just send responses. 
+    // INADDR_ANY is the IP address and 0 is the socket
     // htonl converts a long integer (e.g. address) to a network representation
     // htons converts a short integer (e.g. port) to a network representation
 
@@ -197,40 +203,45 @@ int main(int argc, char* argv[])
 
     int i = bind(sockfd, (struct sockaddr*)& myaddr, sizeof(myaddr));
 
+   // error checking
     if(i<0)
-
     {
         perror(" bind failed\n");
     }
-    for(int j=0;j<4;j++){
 
+    for(int j=0;j<4;j++){
         memset((char *)&addr[j], 0,sizeof(addr[j]));
         addr[j].sin_family = AF_INET;
         addr[j].sin_addr.s_addr = htonl(INADDR_LOOPBACK);
         addr[j].sin_port = htons(receiver_port[j]);
-        // printf("%d\n",receiver_port[j]);
-
     }
-    pthread_t p1;
-    int create = pthread_create(&p1,NULL,receiving_ports,NULL);//thread to send and receive commands
 
+    // create thread to send and receive commands
+    pthread_t p1;
+    int create = pthread_create(&p1,NULL,receiving_ports,NULL);
+    
+    // error checking
     if (create != 0) {
         printf("pthread_create failed\n");
         exit(1);
     }
+
+     // takes in command
      while(1){
+
         //input has to be taken from console
-        printf("Enter transaction type and amount\n");
-        char * send_buffer;//buffer to store the input
+        printf("Enter desired action:\n");
+        char * send_buffer; //buffer to store the input
         size_t bufsize = 32;
         send_buffer = (char*)malloc(bufsize*sizeof(char));
         getline(&send_buffer,&bufsize, stdin);
-        printf("%s\n", send_buffer);
+        //printf("%s\n", send_buffer);
+
         char *command = strtok(send_buffer,":");//type of transaction
-       // printf("%s\n",command);
-        char *amount = strtok(NULL,":");//amount to be debited/credited
-        //printf("%s\n",amount);
+
+	//CREDIT command
         if(strcmp(command,"credit")==0){//if command is credit
+	    char *amount = strtok(NULL,":");//amount to be debited/credited
             acknowledge = 0;
             value = atoi(amount);
            // printf("Amount is %d\n",amount);
@@ -240,15 +251,16 @@ int main(int argc, char* argv[])
             for (int j = 0; j < 4; j++) {
                 sendto(sockfd,credit_buf, strlen(credit_buf), 0, (struct sockaddr *) &addr[j], sizeof(addr[j]));
             }
-
-
         }
-        else if(strcmp(command,"query")==0) {//if command is query
+	
+	//QUERY command
+        else if(strcmp(command,"query")==0  || strcmp(command, "query\n") == 0) {//if command is query
             //amount = atoi(amount);
-            printf("Current Balance after query %d\n",curr_balance);
+            printf("Current Balance: %d\n",curr_balance);
 
-
+	// DEBIT command
         }else if(strcmp(command,"debit")==0) {//if command is debit
+	    char *amount = strtok(NULL,":"); //amount to be debited/credited
             acknowledge = 0;
             value = -atoi(amount);
             printf("Amount is %d\n",value);
@@ -258,16 +270,24 @@ int main(int argc, char* argv[])
                 sendto(sockfd, debit_buf, strlen(debit_buf), 0, (struct sockaddr*) &addr[j], sizeof(addr[j]));
             }
 
-        }else if (strcmp(command, "balance") == 0) {//reconnection
+	// BALANCE command
+        }else if (strcmp(command, "balance") == 0  || strcmp(command, "balance\n") == 0) {//reconnection
             for(int j=0;j<4;j++){
                 sendto(sockfd, "disconnect", strlen("disconnect"), 0, (struct sockaddr*) &addr[j], sizeof(addr[j]));
             }
 
-        } else if (strcmp(command, "exit") == 0) { //exit
+	// EXIT command
+        } else if (strcmp(command, "exit") == 0  || strcmp(command, "exit\n") == 0) { //exit
             exit(0);
 
+	// HELP command
+	} else if (strcmp(command, "help") == 0 || strcmp(command, "help\n") == 0) {//show help
+	    show_prog_help();
+
+	// if command not found
         }else {
-            printf("Unknown Command\n");
+            printf("This is an unknown command.\n");
+	    show_prog_help();
         }
     }
 
