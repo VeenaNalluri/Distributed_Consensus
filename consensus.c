@@ -25,6 +25,18 @@ struct sockaddr_in myaddr,addr[4],address;
 socklen_t addressLength = sizeof(address);
 socklen_t myaddrLength = sizeof(myaddr);
 
+
+void show_prog_help()
+{
+    printf("Within the program, you can do any of the following actions:\n");
+    printf("\tquery - You can call this by typing \"query\". This prints the account balance.\n");
+    printf("\tcredit:<val> - You can call this by typing something like \"credit:10\". This adds val to the account balance.\n");
+    printf("\tdebit:<val> - You can call this by typing something like \"debit:10\". This remove val from the account balance.\n");
+    printf("\tbalance - You can call this by typing \"balance\". This resets the account balance.\n");
+    printf("\thelp - You can call this by typing \"help\". This shows this help message.\n");
+    printf("\texit - You can call this by typing \"exit\". This exits the program.\n");
+}
+
 void show_help() 
 {
     printf( "Use: main [options]\n");
@@ -43,17 +55,6 @@ void show_help()
     show_prog_help();
 }
 
-void show_prog_help()
-{
-    printf("Within the program, you can do any of the following actions:\n");
-    printf("\tquery - You can call this by typing \"query\". This prints the account balance.\n");
-    printf("\tcredit:<val> - You can call this by typing something like \"credit:10\". This adds val to the account balance.\n");
-    printf("\tdebit:<val> - You can call this by typing something like \"debit:10\". This remove val from the account balance.\n");
-    printf("\tbalance - You can call this by typing \"balance\". This resets the account balance.\n");
-    printf("\thelp - You can call this by typing \"help\". This shows this help message.\n");
-    printf("\texit - You can call this by typing \"exit\". This exits the program.\n");
-}
-
 // receiving_ports
 // implements two phase commit protocol
 void *receiving_ports(void *arg) {
@@ -70,31 +71,30 @@ void *receiving_ports(void *arg) {
 
             char *command = strtok(receive_buffer, ":"); //type of transaction
             char *amount = strtok(NULL, ":");//amount to be credited/debited
-            printf("Printing command given %s\n",command);
+           // printf("Printing command given %s\n",command);
 
             if (strcmp(command, "credit") == 0) {//if command is credit
                 value = atoi(amount);//set the value
-                printf("Sending Yes to credit");
+                printf("Sending Yes to credit\n");
                 sendto(sockfd, "Yes", strlen("Yes"), 0, (struct sockaddr *) &address,sizeof(address));//send Yes
 
             } else if (strcmp(command, "debit") == 0) {//if the commmand is debit
                 value = atoi(amount);
 
                 if (curr_balance+value >= 0) {//check if the debit operation can be performed
-                    printf("Sending Yes to Debit");
+                    printf("Sending Yes to Debit\n");
                     sendto(sockfd, "Yes", strlen("Yes"), 0, (struct sockaddr *) &address, sizeof(address));
                 } else {
-                    printf("Sending No to Debit");
+                    printf("Sending No to Debit\n");
                     sendto(sockfd, "No", strlen("No"), 0, (struct sockaddr *) &address, sizeof(address));//send No to cancel the transaction
                 }
 
             } else if (strcmp(command, "Yes") == 0) {
                 ++acknowledge;
-                printf("Acknowledge is %d\n", acknowledge);
                 if (acknowledge == 4) {//if all the atms send acknowledgement consensus is achieved
                     curr_balance = curr_balance+value;
-                    printf("current balance is %d",curr_balance);
-                    printf("Transaction Succeeded");
+                    printf("current balance is %d\n",curr_balance);
+                    printf("Transaction Succeeded\n");
                     acknowledge = 0;
                     for (int i = 0; i < 4; i++) {
                         sendto(sockfd, "commit", strlen("commit"), 0, (struct sockaddr *) &addr[i], sizeof(addr[i]));//send commit the transaction to other atms
@@ -102,12 +102,12 @@ void *receiving_ports(void *arg) {
                 }
 
             } else if (strcmp(command, "No") == 0) {
+                printf("Transaction Failed \n");
                 for (int i = 0; i < 4; i++) {
-                    sendto(sockfd, "abort", strlen("a"), 0, (struct sockaddr *) &addr[i], sizeof(addr[i]));//send abhort to cancel the transaction
+                    sendto(sockfd, "abort", strlen("abort"), 0, (struct sockaddr *) &addr[i], sizeof(addr[i]));//send abhort to cancel the transaction
                 }
 
             } else if (strcmp(command, "commit") == 0) { // if confirmation of transaction is recieved
-                printf("In commit\n");
                 printf("Amount is %d\n",value);
                 curr_balance = curr_balance + value;//change the balance in all atms
                 printf("Current Balance is %d\n", curr_balance);
@@ -295,9 +295,9 @@ int main(int argc, char* argv[])
 	    show_prog_help();
 
 	// if command not found
-        }else {
-            printf("This is an unknown command.\n");
-	    show_prog_help();
         }
+        //else {
+         //   printf("This is an unknown command.\n");
+	      //      }
      }
  }

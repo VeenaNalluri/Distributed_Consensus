@@ -1,4 +1,8 @@
-Readme for consensus project
+﻿Readme for consensus project
+
+Architecture:
+
+
 
 In order to build this, simply compile it with a c compiler. You can use the same directions that we have been used during this class. Go into the folder and issue the following commands at the terminal:
 - mkdir build
