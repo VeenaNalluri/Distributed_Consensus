@@ -118,9 +118,12 @@ void *receiving_ports(void *arg) {
             } else if (strcmp(command, "disconnect") == 0) {//terminates and reconnects
                 char ReConnect[] = "";
                 sprintf(ReConnect, "setbalance: %d", curr_balance);//setting the balance
+		printf("balance:%d\n", curr_balance);
                 sendto(sockfd, ReConnect, strlen(ReConnect), 0, (struct sockaddr*) &address, sizeof(address));
 
             } else if (strcmp(command, "setbalance") == 0) {
+		printf("amount: %d\n", amount);
+		printf("acknowledge: %d\n", acknowledge);
                 if (acknowledge == 0) {
                     set_balance = atoi(amount);
                     ++acknowledge;
@@ -232,6 +235,10 @@ int main(int argc, char* argv[])
     if (create != 0) {
         printf("pthread_create failed\n");
         exit(1);
+    }
+
+    for(int j=0;j<4;j++){
+                sendto(sockfd, "disconnect", strlen("disconnect"), 0, (struct sockaddr*) &addr[j], sizeof(addr[j]));
     }
 
      // takes in command
