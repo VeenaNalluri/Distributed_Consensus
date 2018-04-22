@@ -54,23 +54,29 @@ void show_prog_help()
     printf("\texit - You can call this by typing \"exit\". This exits the program.\n");
 }
 
+// receiving_ports
+// implements two phase commit protocol
 void *receiving_ports(void *arg) {
 
     int messagelen;
     char receive_buffer[2048];
     socklen_t addressLength = sizeof(address);
 
-
     while (1) {
+
         messagelen = recvfrom(sockfd, receive_buffer, 2048, 0, (struct sockaddr *) &address, &addressLength);
-        if (messagelen > 0) {
-            char *command = strtok(receive_buffer, ":");//type of transaction
+        
+	if (messagelen > 0) {
+
+            char *command = strtok(receive_buffer, ":"); //type of transaction
             char *amount = strtok(NULL, ":");//amount to be credited/debited
             printf("Printing command given %s\n",command);
+
             if (strcmp(command, "credit") == 0) {//if command is credit
                 value = atoi(amount);//set the value
                 printf("Sending Yes to credit");
                 sendto(sockfd, "Yes", strlen("Yes"), 0, (struct sockaddr *) &address,sizeof(address));//send Yes
+
             } else if (strcmp(command, "debit") == 0) {//if the commmand is debit
                 value = atoi(amount);
 
@@ -85,21 +91,19 @@ void *receiving_ports(void *arg) {
             } else if (strcmp(command, "Yes") == 0) {
                 ++acknowledge;
                 printf("Acknowledge is %d\n", acknowledge);
-                if (acknowledge == 1) {//if all the atms send acknowledgement consensus is achieved
+                if (acknowledge == 4) {//if all the atms send acknowledgement consensus is achieved
                     curr_balance = curr_balance+value;
                     printf("current balance is %d",curr_balance);
                     printf("Transaction Succeeded");
                     acknowledge = 0;
                     for (int i = 0; i < 4; i++) {
-
                         sendto(sockfd, "commit", strlen("commit"), 0, (struct sockaddr *) &addr[i], sizeof(addr[i]));//send commit the transaction to other atms
                     }
-
                 }
-            } else if (strcmp(command, "No") == 0) {
 
+            } else if (strcmp(command, "No") == 0) {
                 for (int i = 0; i < 4; i++) {
-                    sendto(sockfd, "abhort", strlen("a"), 0, (struct sockaddr *) &addr[i], sizeof(addr[i]));//send abhort to cancel the transaction
+                    sendto(sockfd, "abort", strlen("a"), 0, (struct sockaddr *) &addr[i], sizeof(addr[i]));//send abhort to cancel the transaction
                 }
 
             } else if (strcmp(command, "commit") == 0) { // if confirmation of transaction is recieved
@@ -107,13 +111,15 @@ void *receiving_ports(void *arg) {
                 printf("Amount is %d\n",value);
                 curr_balance = curr_balance + value;//change the balance in all atms
                 printf("Current Balance is %d\n", curr_balance);
-            } else if (strcmp(command, "abhort") == 0) {
-                printf("Abhorted");
-            }
-            else if (strcmp(command, "disconnect") == 0) {//terminates and reconnects
+
+            } else if (strcmp(command, "abort") == 0) {
+                printf("Aborted");
+            
+            } else if (strcmp(command, "disconnect") == 0) {//terminates and reconnects
                 char ReConnect[] = "";
                 sprintf(ReConnect, "setbalance: %d", curr_balance);//setting the balance
                 sendto(sockfd, ReConnect, strlen(ReConnect), 0, (struct sockaddr*) &address, sizeof(address));
+
             } else if (strcmp(command, "setbalance") == 0) {
                 if (acknowledge == 0) {
                     set_balance = atoi(amount);
@@ -125,19 +131,21 @@ void *receiving_ports(void *arg) {
                             printf("\nConsensus reached. Balance set.\n");
                             curr_balance = set_balance;
                             acknowledge = 0;//reset the acknowledgement
-
                         }
                     }
                 }
             }
+	    
+	    // sets receive_buffer back
             for (int i = 0; i < messagelen; ++i) {
                 receive_buffer[i] = '\0';
-            }}
-        else {
-                printf("error with recvfrom %d\n", errno);//recvfrom has an error
-        }
+            }
+
+        } else {
+                printf("There's an error with recvfrom:s %d\n", errno);//recvfrom has an error
         }
     }
+}
 
 int main(int argc, char* argv[])
 {
@@ -240,35 +248,30 @@ int main(int argc, char* argv[])
         char *command = strtok(send_buffer,":");//type of transaction
 
 	//CREDIT command
-        if(strcmp(command,"credit")==0){//if command is credit
-	    char *amount = strtok(NULL,":");//amount to be debited/credited
+        if(strcmp(command,"credit")==0){
             acknowledge = 0;
-            value = atoi(amount);
-           // printf("Amount is %d\n",amount);
-            //printf("Current Balance after credit is %d\n",curr_balance);
+            value = atoi(strtok(NULL, ":"));//amount to be debited/credited
+	    // printf("Amount is %d\n",value);
             char credit_buf[] = ""; // intialize credit message
-            sprintf(credit_buf, "credit: %d",value);//credit_buffer to send credit info
+            sprintf(credit_buf, "credit:%d",value);//credit_buffer to send credit info
             for (int j = 0; j < 4; j++) {
                 sendto(sockfd,credit_buf, strlen(credit_buf), 0, (struct sockaddr *) &addr[j], sizeof(addr[j]));
             }
-        }
-	
-	//QUERY command
-        else if(strcmp(command,"query")==0  || strcmp(command, "query\n") == 0) {//if command is query
-            //amount = atoi(amount);
-            printf("Current Balance: %d\n",curr_balance);
 
 	// DEBIT command
         }else if(strcmp(command,"debit")==0) {//if command is debit
-	    char *amount = strtok(NULL,":"); //amount to be debited/credited
             acknowledge = 0;
-            value = -atoi(amount);
-            printf("Amount is %d\n",value);
+            value = -atoi(strtok(NULL,":")); //amount to be debited/credited
+            // printf("Amount is %d\n",value);
             for(int j=0;j<4;j++){
                 char debit_buf[] = "";
                 sprintf(debit_buf, "debit:%d",value);
                 sendto(sockfd, debit_buf, strlen(debit_buf), 0, (struct sockaddr*) &addr[j], sizeof(addr[j]));
             }
+         
+         //QUERY command
+        } else if(strcmp(command,"query")==0  || strcmp(command, "query\n") == 0) {
+            printf("Current Balance: %d\n",curr_balance);
 
 	// BALANCE command
         }else if (strcmp(command, "balance") == 0  || strcmp(command, "balance\n") == 0) {//reconnection
@@ -289,6 +292,5 @@ int main(int argc, char* argv[])
             printf("This is an unknown command.\n");
 	    show_prog_help();
         }
-    }
-
+     }
  }
