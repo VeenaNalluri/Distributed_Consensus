@@ -1,5 +1,5 @@
-#CS3281
-####Implementation of Distributed Consensus using Two-Phase Protocol
+# CS3281
+#### Implementation of Distributed Consensus using Two-Phase Protocol
 
 ***Architecture***
 
