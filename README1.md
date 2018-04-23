@@ -1,7 +1,6 @@
-// Name: Aneesha Dasari and Veena Nalluri
-// VUnetID: dasaria, nallurv
-// Email: aneesha.dasari@vanderbilt.edu, veena.nalluri@vanderbilt.edu
-// Class: CS 3281 - Vanderbilt University
+#CS3281
+####Implementation of Distributed Consensus using Two-Phase Protocol
+
 ***Architecture***
 
 ![architecture v1.0](https://github.com/cs3281/final-project-Veeneesha/blob/master/Two_PhaseCommit.PNG)
