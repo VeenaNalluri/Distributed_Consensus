@@ -22,10 +22,10 @@ int set_balance; //resetting the balance if disconnected
 int printed = 0; // set if printed transaction failed message
 int sockfd;     //filedescripter for socket
 int acknowledge=0; //setting acknowledgement if message received is Yes
+int sec_ack = 0; //second acknowledge
 struct sockaddr_in myaddr,addr[4],address;
 socklen_t addressLength = sizeof(address);
 socklen_t myaddrLength = sizeof(myaddr);
-
 
 void show_prog_help()
 {
@@ -70,6 +70,7 @@ void *receiving_ports(void *arg) {
 	if (messagelen > 0) {
             char *command = strtok(receive_buffer, ":"); //type of transaction
             char *amount = strtok(NULL, ":");//amount to be credited/debited
+	    //printf("command:%s\n", command);
 
             if (strcmp(command, "credit") == 0) {//if command is credit
                 value = atoi(amount);//set the value
@@ -87,13 +88,14 @@ void *receiving_ports(void *arg) {
 
             } else if (strcmp(command, "Yes") == 0) {
                 ++acknowledge;
+
                 if (acknowledge == 4) {//if all the atms send acknowledgement consensus is achieved
                     curr_balance = curr_balance+value;
                     printf("Transaction Succeeded\n");
-                    acknowledge = 0;
                     for (int i = 0; i < 4; i++) {
                         sendto(sockfd, "commit", strlen("commit"), 0, (struct sockaddr *) &addr[i], sizeof(addr[i]));//send commit the transaction to other atms
                     }
+		    acknowledge = 0;
                 }
 
             } else if (strcmp(command, "No") == 0) {
@@ -118,19 +120,15 @@ void *receiving_ports(void *arg) {
 
             } else if (strcmp(command, "setbalance") == 0) {
 		value = atoi(amount);
-                if (acknowledge == 0) {
+                if (sec_ack == 0) {
                     set_balance = value;
-                    ++acknowledge;
+                    ++sec_ack;
                 } else {
                     if (set_balance == value) {
-                        ++acknowledge;
-                        if (acknowledge == 4) {
+                        ++sec_ack;
+                        if (sec_ack == 4) {
 			    curr_balance = set_balance;
-                            acknowledge = 0;//reset the acknowledgement
-			    for (int i = 0; i < 4; i++) {
-				value = 0;
-                       	 	sendto(sockfd, "commit", strlen("commit"), 0, (struct sockaddr *) &addr[i], sizeof(addr[i]));//send commit the transaction to other atms
-                    	    }
+                            sec_ack = 0;//reset the acknowledge
                         }
                     }
                 }
@@ -236,7 +234,7 @@ int main(int argc, char* argv[])
     // Used for Fault Case
     // Uses commit protocol to update balance
     for(int j=0;j<4;j++){
-                sendto(sockfd, "disconnect:0", strlen("disconnect:0"), 0, (struct sockaddr*) &addr[j], sizeof(addr[j]));
+                sendto(sockfd, "disconnect", strlen("disconnect"), 0, (struct sockaddr*) &addr[j], sizeof(addr[j]));
     }
 
      // takes in command
