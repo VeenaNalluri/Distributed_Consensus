@@ -25,12 +25,13 @@ Where options are:\n");
 To properly use this program, you must open five terminals where you will create five instances of the program each with different port numbers and connecting them to the other ports.
 To start an instance properly, you must give it an argument for p and four arguments for n.
 For example, these might be the calls you make in five different terminals:
+####################################################################################
 	1. ./main -p 5600 -n 5601,5602,5603,5604
 	2. ./main -p 5601 -n 5600,5602,5603,5604
 	3. ./main -p 5602 -n 5601,5600,5603,5604
 	4. ./main -p 5603 -n 5601,5602,5600,5604
 	5. ./main -p 5604 -n 5601,5602,5603,5600
-
+####################################################################################
 Within the program, you can do any of the following actions:\n");
 	query - You can call this by typing \"query\". This prints the account balance.
 	credit:<val> - You can call this by typing something like \"credit:10\". This adds val to the account balance.
