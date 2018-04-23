@@ -1,15 +1,18 @@
-﻿Readme for consensus project
+// Name: Aneesha Dasari and Veena Nalluri
+// VUnetID: dasaria, nallurv
+// Email: aneesha.dasari@vanderbilt.edu, veena.nalluri@vanderbilt.edu
+// Class: CS 3281 - Vanderbilt University
 
-Architecture:
-
-
-
-In order to build this, simply compile it with a c compiler. You can use the same directions that we have been used during this class. Go into the folder and issue the following commands at the terminal:
+Building:
+In order to build this, simply compile it with a c compiler. You can use the same directions that we have been using during this class. Go into the project folder and issue the following commands at the terminal:
 - mkdir build
 - cd build
 - cmake ..
 
-Then you can issue "make" to compile the program and run it using ./main. Use "./main -h" to understand how to run and use the program. I have also pasted the help information below.
+Then you can issue "make" to compile the program.
+
+Running:
+Run it using ./main. Use "./main -h" to understand how to run and use the program. I have also pasted the help information below.
 
 Use: main [options]
 Where options are:\n");
@@ -31,3 +34,6 @@ Within the program, you can do any of the following actions:\n");
 	credit:<val> - You can call this by typing something like \"credit:10\". This adds val to the account balance.
 	debit:<val> - You can call this by typing something like \"debit:10\". This remove val from the account balance.
 	balance - You can call this by typing something like\"balance\". This resets the account balance.
+
+Testing:
+To test this program, open up five different instances of the program and run it as specified in the running section of this readme. Simply perform different actions to see whether they act as expected. You can also test the fault case by exiting out of any one of the programs and restarting the instance. By calling "query", you should be able to see that the balance is automatically updated. This covers the basic testing of the program. To look into more detail, look at having a transaction placed from each instance of the program and in different orders. This also counts for testing the fault case.
