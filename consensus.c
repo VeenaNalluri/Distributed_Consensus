@@ -238,7 +238,6 @@ int main(int argc, char* argv[])
     for(int j=0;j<4;j++){
                 sendto(sockfd, "disconnect:0", strlen("disconnect:0"), 0, (struct sockaddr*) &addr[j], sizeof(addr[j]));
     }
-    printf("Current Balance: %d\n", curr_balance);
 
      // takes in command
      while(1){
