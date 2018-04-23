@@ -2,6 +2,9 @@
 // VUnetID: dasaria, nallurv
 // Email: aneesha.dasari@vanderbilt.edu, veena.nalluri@vanderbilt.edu
 // Class: CS 3281 - Vanderbilt University
+***Architecture***
+
+![architecture v1.0](https://github.com/cs3281/final-project-Veeneesha/blob/master/Two_PhaseCommit.PNG)
 
 Building:
 In order to build this, simply compile it with a c compiler. You can use the same directions that we have been using during this class. Go into the project folder and issue the following commands at the terminal:
