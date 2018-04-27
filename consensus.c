@@ -30,6 +30,7 @@ int sec_ack = 0; //second acknowledge
 int myport = -1; //coordinator port[atm where the transaction is done]
 //receiving ports[other atms where the transaction can be done]
 int receiver_port[] = {-1,-1,-1,-1};
+int acknowledged[4] = {-1,-1,-1,-1};
 struct sockaddr_in myaddr,addr[4],address;
 socklen_t addressLength = sizeof(address);
 socklen_t myaddrLength = sizeof(myaddr);
@@ -62,6 +63,7 @@ void show_help()
     show_prog_help();
 }
 
+//for timeout purposes
 void thr_exit()
 {
 	pthread_mutex_lock(&m);
@@ -78,6 +80,7 @@ void thr_exit()
 	start = time(NULL);
 }
 
+//for timeout purposes
 void thr_join()
 {
     pthread_mutex_lock(&m);
@@ -110,7 +113,7 @@ void *receiving_ports(void *arg) {
                 value = atoi(amount);//set the value
                 char credit_ack[20] = "";
                     sprintf(credit_ack, "Yes:%d",myport );
-                    printf("message sent is %s\n",credit_ack);
+                    //printf("message sent is %s\n",credit_ack);
                     sendto(sockfd, credit_ack, strlen(credit_ack), 0, (struct sockaddr *) &address,sizeof(address));//send Yes
 
                 //setting the balance
@@ -122,22 +125,34 @@ void *receiving_ports(void *arg) {
                 if (curr_balance+value >= 0) {//check if the debit operation can be performed
                     char debit_ack[20] = "";
                     sprintf(debit_ack, "Yes:%d",myport );
-                    printf("message sent is %s\n",debit_ack);
+                    //printf("message sent is %s\n",debit_ack);
                     sendto(sockfd, debit_ack, strlen(debit_ack), 0, (struct sockaddr *) &address,sizeof(address));//send Yes
 
                 } else {
                     char debit_ack[20] = "";
                     sprintf(debit_ack, "No:%d",myport );
-                    printf("message sent is %s\n",debit_ack);
+                    //printf("message sent is %s\n",debit_ack);
                     sendto(sockfd, debit_ack, strlen(debit_ack), 0, (struct sockaddr *) &address,sizeof(address));//send No to cancel the transaction
                 }
 		printed = 0;
 
             } else if (strcmp(command, "Yes") == 0) {
-                printf("Acknowledge is from port %s\n",amount);
-                ++acknowledge;
+		int port = atoi(amount);
+		//make sure that a port can't send yes more than once
+		//checking if port num is in acknowledged
+		int present = 0;
+		for (int i = 0; i < 4; i++) {
+			if (port == acknowledged[i]) {
+				present = 1;
+			}
+		}
                 
-                //printf("Acknowledge from the port%d\n",)
+		// if port hasn't already sent yes, add to acknowledged
+		if(present != 1) {
+			printf("Yes sent from port: %d\n", port);
+			acknowledged[acknowledge] = port;
+                	++acknowledge;
+		}
 
                 if (acknowledge == 4) {//if all the atms send acknowledgement consensus is achieved
                     curr_balance = curr_balance+value;
@@ -145,7 +160,12 @@ void *receiving_ports(void *arg) {
                     for (int i = 0; i < 4; i++) {
                         sendto(sockfd, "commit", strlen("commit"), 0, (struct sockaddr *) &addr[i], sizeof(addr[i]));//send commit the transaction to other atms
                     }
+		    
+   		   //reset
 		    acknowledge = 0;	
+		    for (int i = 0; i < 4; i++) {
+			acknowledged[i] = -1;
+		   }
 		    done = 1;
 		    thr_exit();	    
                 }
