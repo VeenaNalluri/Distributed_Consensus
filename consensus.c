@@ -23,6 +23,9 @@ int printed = 0; // set if printed transaction failed message
 int sockfd;     //filedescripter for socket
 int acknowledge=0; //setting acknowledgement if message received is Yes
 int sec_ack = 0; //second acknowledge
+int myport = -1; //coordinator port[atm where the transaction is done]
+//receiving ports[other atms where the transaction can be done]
+int receiver_port[] = {-1,-1,-1,-1};
 struct sockaddr_in myaddr,addr[4],address;
 socklen_t addressLength = sizeof(address);
 socklen_t myaddrLength = sizeof(myaddr);
@@ -74,20 +77,36 @@ void *receiving_ports(void *arg) {
 
             if (strcmp(command, "credit") == 0) {//if command is credit
                 value = atoi(amount);//set the value
-                sendto(sockfd, "Yes", strlen("Yes"), 0, (struct sockaddr *) &address,sizeof(address));//send Yes
+                char credit_ack[20] = "";
+                    sprintf(credit_ack, "Yes:%d",myport );
+                    printf("message sent is %s\n",credit_ack);
+                    sendto(sockfd, credit_ack, strlen(credit_ack), 0, (struct sockaddr *) &address,sizeof(address));//send Yes
+
+                //setting the balance
+
 
             } else if (strcmp(command, "debit") == 0) {//if the commmand is debit
                 value = atoi(amount);
 
                 if (curr_balance+value >= 0) {//check if the debit operation can be performed
-                    sendto(sockfd, "Yes", strlen("Yes"), 0, (struct sockaddr *) &address, sizeof(address));
+                    char debit_ack[20] = "";
+                    sprintf(debit_ack, "Yes:%d",myport );
+                    printf("message sent is %s\n",debit_ack);
+                    sendto(sockfd, debit_ack, strlen(debit_ack), 0, (struct sockaddr *) &address,sizeof(address));//send Yes
+
                 } else {
-                    sendto(sockfd, "No", strlen("No"), 0, (struct sockaddr *) &address, sizeof(address));//send No to cancel the transaction
+                    char debit_ack[20] = "";
+                    sprintf(debit_ack, "No:%d",myport );
+                    printf("message sent is %s\n",debit_ack);
+                    sendto(sockfd, debit_ack, strlen(debit_ack), 0, (struct sockaddr *) &address,sizeof(address));//send No to cancel the transaction
                 }
 		printed = 0;
 
             } else if (strcmp(command, "Yes") == 0) {
+                printf("Acknowledge is from port %s\n",amount);
                 ++acknowledge;
+                //
+                //printf("Acknowledge from the port%d\n",)
 
                 if (acknowledge == 4) {//if all the atms send acknowledgement consensus is achieved
                     curr_balance = curr_balance+value;
@@ -150,8 +169,7 @@ int main(int argc, char* argv[])
     char c;
     char *nums;
 
-    int myport = -1; //coordinator port[atm where the transaction is done]  
-    int receiver_port[] = {-1,-1,-1,-1}; //receiving ports[other atms where the transaction can be done]
+
 
     // For each command line argument given,
     // override the appropriate configuration value.
