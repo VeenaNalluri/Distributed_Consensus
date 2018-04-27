@@ -15,6 +15,10 @@
 #include <pthread.h>
 #include <errno.h>
 
+int done = 0;
+pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t c = PTHREAD_COND_INITIALIZER;
+time_t start, end;
 
 int curr_balance; //bank account balance
 int value; //amount entered
@@ -56,6 +60,33 @@ void show_help()
     printf("\t4. ./main -p 5603 -n 5601,5602,5600,5604\n"); 
     printf("\t5. ./main -p 5604 -n 5601,5602,5603,5600\n\n"); 
     show_prog_help();
+}
+
+void thr_exit()
+{
+	pthread_mutex_lock(&m);
+	if (end-start > 10)
+	{
+		//printf("signal\n");
+		pthread_cond_signal(&c);
+
+		for (int i = 0; i < 4; i++) {
+                    	sendto(sockfd, "abort", strlen("abort"), 0, (struct sockaddr *) &addr[i], sizeof(addr[i]));//send abhort to cancel the transaction
+               	}
+	}
+	pthread_mutex_unlock(&m);
+	start = time(NULL);
+}
+
+void thr_join()
+{
+    pthread_mutex_lock(&m);
+    while (done == 0)
+    {
+	pthread_cond_wait(&c, &m);
+    }
+    pthread_mutex_unlock(&m);
+    done = 0;
 }
 
 // receiving_ports
@@ -105,7 +136,7 @@ void *receiving_ports(void *arg) {
             } else if (strcmp(command, "Yes") == 0) {
                 printf("Acknowledge is from port %s\n",amount);
                 ++acknowledge;
-                //
+                
                 //printf("Acknowledge from the port%d\n",)
 
                 if (acknowledge == 4) {//if all the atms send acknowledgement consensus is achieved
@@ -114,7 +145,9 @@ void *receiving_ports(void *arg) {
                     for (int i = 0; i < 4; i++) {
                         sendto(sockfd, "commit", strlen("commit"), 0, (struct sockaddr *) &addr[i], sizeof(addr[i]));//send commit the transaction to other atms
                     }
-		    acknowledge = 0;
+		    acknowledge = 0;	
+		    done = 1;
+		    thr_exit();	    
                 }
 
             } else if (strcmp(command, "No") == 0) {
@@ -128,9 +161,12 @@ void *receiving_ports(void *arg) {
 
             } else if (strcmp(command, "commit") == 0) { // if confirmation of transaction is recieved
                 curr_balance = curr_balance + value;//change the balance in all atms
+		done = 1;
+		thr_exit();
 
             } else if (strcmp(command, "abort") == 0) {
-                //do nothing
+                done = 1;
+		thr_exit();
             
             } else if (strcmp(command, "disconnect") == 0) {//terminates and reconnects
                 char ReConnect[20] = "";
@@ -161,7 +197,10 @@ void *receiving_ports(void *arg) {
         } else {
                 printf("There's an error with recvfrom:s %d\n", errno);//recvfrom has an error
         }
+	end = time(NULL);
+	thr_exit();
     }
+    
 }
 
 int main(int argc, char* argv[])
@@ -257,7 +296,8 @@ int main(int argc, char* argv[])
 
      // takes in command
      while(1){
-
+	start = time(NULL);
+	done = 0;
         //input has to be taken from console
         printf("Enter desired action:\n");
 
@@ -278,6 +318,7 @@ int main(int argc, char* argv[])
             for (int j = 0; j < 4; j++) {
                 sendto(sockfd,credit_buf, strlen(credit_buf), 0, (struct sockaddr *) &addr[j], sizeof(addr[j]));
             }
+	    thr_join();
 
 	// DEBIT command
         }else if(strcmp(command,"debit")==0) {//if command is debit
@@ -289,6 +330,7 @@ int main(int argc, char* argv[])
                 sprintf(debit_buf, "debit:%d",value);
                 sendto(sockfd, debit_buf, strlen(debit_buf), 0, (struct sockaddr*) &addr[j], sizeof(addr[j]));
             }
+	    thr_join();
          
          //QUERY command
         } else if(strcmp(command,"query")==0  || strcmp(command, "query\n") == 0) {
